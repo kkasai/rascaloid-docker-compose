@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:10-alpine
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=rascaloid
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.{{.ID}}
+    networks:
+      - fluentd_default
+
+  api:
+    image: kawasima/rascaloid:postgres
+    environment:
+      - JDBC_URL=jdbc:postgresql://db/rascaloid
+      - JDBC_USER=rascaloid
+      - JDBC_PASS=password
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.{{.ID}}
+    networks:
+      - fluentd_default
+    depends_on:
+      - db
+
+  ui:
+    image: kawasima/rascaloid-ri
+    ports:
+      - 3030:3000
+    environment:
+      - PORT=3000
+      - RASCALOID_HOST=api
+      - RASCALOID_PORT=3000
+      - http_porxy=
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.{{.ID}}
+    networks:
+      - fluentd_default
+    depends_on:
+      - api
+
+networks:
+  fluentd_default:
+    external: true
